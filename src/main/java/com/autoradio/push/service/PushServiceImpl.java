@@ -65,7 +65,7 @@ public class PushServiceImpl implements PushService {
 		if (message.getSendOvertimeRule() != 0 && message.getSendOvertimeRule() != 1 && message.getSendOvertimeRule() != 2) {
 			return JSON.toString(createResult(0, "消息发送超过发送时间段后采取的策略只能为0、1、2中的一个,0代表放弃,1代表等待,2代表强制发送"));
 		}
-		//向数据库中添加待发送记录
+		// 向数据库中添加待发送记录
 		jdbcTemplate.update("insert into push_message(msg_no,msg_platform,msg_title,msg_content,send_state,send_start_time,send_end_time,send_overtime_rule) value(?,?,?,?,?,?,?,?)",
 				new PreparedStatementSetter() {
 
