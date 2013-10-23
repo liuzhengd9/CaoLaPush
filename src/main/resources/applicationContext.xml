@@ -55,15 +55,37 @@
 	
 	<bean id="batchTransactionManager" class="org.springframework.batch.support.transaction.ResourcelessTransactionManager" />
 	
-	<batch:job id="caoLaPushJob">
-		<batch:step id="saveMessage" next="copyData">
-			<batch:tasklet>
-				<bean class="com.autoradio.push.batch.SaveMessageTasklet"/>
-			</batch:tasklet>
+	<bean id="runIdIncrementer" class="org.springframework.batch.core.launch.support.RunIdIncrementer" />
+	
+	<bean id="pushRecordItemReader" class="org.springframework.batch.item.database.JdbcCursorItemReader" scope="step">
+		<property name="dataSource" ref="dataSource" />
+		<property name="sql" value="select id as id,msg_no as msgNo,receive_info_table_name as receiveInfoTableName from push_record where msg_no=#{jobParameters['msgNo']}" />
+		<property name="rowMapper">
+			<bean class="org.springframework.jdbc.core.BeanPropertyRowMapper">
+				<property name="mappedClass" value="com.autoradio.push.service.PushRecord" />
+			</bean>
+		</property>
+		<!-- property name="preparedStatementSetter">
+			<bean class="org.springframework.batch.core.resource.ListPreparedStatementSetter">
+				<property name="parameters">
+					<list>
+						<value>#{jobParameters['msgNo']}</value>
+					</list>
+				</property>
+			</bean>
+		</property-->
+	</bean>
+	
+	<batch:job id="caoLaPushJob" incrementer="runIdIncrementer">
+		<batch:step id="createPushRecord" next="importMongoData2MySql">
+			<batch:tasklet ref="createPushRecordTasklet" />
 		</batch:step>
-		<batch:step id="copyData">
+		<batch:step id="importMongoData2MySql" next="pushMessage">
+			<batch:tasklet ref="importMongoData2MySqlTasklet" />
+		</batch:step>
+		<batch:step id="pushMessage">
 			<batch:tasklet>
-				<bean class="com.autoradio.push.batch.CopyDataTasklet"/>
+				<batch:chunk reader="pushRecordItemReader" processor="pushMessageProcessor" writer="pushResultWriter" commit-interval="10" />
 			</batch:tasklet>
 		</batch:step>
 	</batch:job>

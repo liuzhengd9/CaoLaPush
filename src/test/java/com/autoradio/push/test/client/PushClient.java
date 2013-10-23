@@ -17,7 +17,7 @@ public class PushClient extends BaseTest {
 	public void testPush() {
 
 		Message message = new Message();
-		message.setMsgNo("1000");
+		message.setMsgNo("1001");
 		message.setMsgPlatform(2);
 		message.setMsgTitle("推送测试");
 		message.setMsgContent("今年国家颁布下发了关于农村小额贷款的政策的整改通知");
