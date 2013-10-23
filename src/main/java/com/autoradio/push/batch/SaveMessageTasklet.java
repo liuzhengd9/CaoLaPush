@@ -10,7 +10,9 @@ public class SaveMessageTasklet implements Tasklet {
 	@Override
 	public RepeatStatus execute(StepContribution contribution, ChunkContext chunkContext) throws Exception {
 
-		System.out.println("SaveMessageTasklet execute..." + chunkContext.getAttribute("no"));
+		System.out.println(chunkContext.getStepContext().getJobParameters().get("msgNo"));
+		chunkContext.getStepContext().getJobParameters().put("name", "刘正");
+		System.out.println("SaveMessageTasklet execute...");
 		return RepeatStatus.FINISHED;
 	}
 

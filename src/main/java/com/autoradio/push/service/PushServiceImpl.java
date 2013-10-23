@@ -50,7 +50,7 @@ public class PushServiceImpl implements PushService {
 		if (StringUtils.isEmpty(message.getMsgNo())) {
 			return JSON.toString(createResult(0, "消息唯一编号不能为空"));
 		}
-		if (message.getMsgPlatform() != 0 || message.getMsgPlatform() != 1 || message.getMsgPlatform() != 2) {
+		if (message.getMsgPlatform() != 0 && message.getMsgPlatform() != 1 && message.getMsgPlatform() != 2) {
 			return JSON.toString(createResult(0, "消息推送平台只能为0、1、2中的一个,0代表ios,1代表android,2代表全部"));
 		}
 		if (StringUtils.isEmpty(message.getMsgTitle())) {
@@ -59,7 +59,13 @@ public class PushServiceImpl implements PushService {
 		if (StringUtils.isEmpty(message.getMsgContent())) {
 			return JSON.toString(createResult(0, "消息内容不能为空"));
 		}
-
+		if (message.getSendState() != 0) {
+			return JSON.toString(createResult(0, "消息推送发送状态只能为0,代表未发送"));
+		}
+		if (message.getSendOvertimeRule() != 0 && message.getSendOvertimeRule() != 1 && message.getSendOvertimeRule() != 2) {
+			return JSON.toString(createResult(0, "消息发送超过发送时间段后采取的策略只能为0、1、2中的一个,0代表放弃,1代表等待,2代表强制发送"));
+		}
+		//向数据库中添加待发送记录
 		jdbcTemplate.update("insert into push_message(msg_no,msg_platform,msg_title,msg_content,send_state,send_start_time,send_end_time,send_overtime_rule) value(?,?,?,?,?,?,?,?)",
 				new PreparedStatementSetter() {
 

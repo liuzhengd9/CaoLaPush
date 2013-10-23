@@ -10,6 +10,7 @@ public class CopyDataTasklet implements Tasklet {
 	@Override
 	public RepeatStatus execute(StepContribution contribution, ChunkContext chunkContext) throws Exception {
 
+		System.out.println(chunkContext.getStepContext().getJobExecutionContext().get("name"));
 		System.out.println("CopyDataTasklet execute...");
 		return RepeatStatus.FINISHED;
 	}
