@@ -4,6 +4,7 @@ import javax.annotation.Resource;
 
 import org.junit.Test;
 
+import com.autoradio.push.service.Message;
 import com.autoradio.push.service.PushService;
 import com.autoradio.push.test.BaseTest;
 
@@ -13,9 +14,9 @@ public class PushClient extends BaseTest {
 	private PushService pushService;
 
 	@Test
-	public void push() {
+	public void testPush() {
 
-		pushService.push();
+		pushService.push(new Message());
 	}
 
 }

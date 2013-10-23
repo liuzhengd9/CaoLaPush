@@ -5,5 +5,5 @@ import javax.jws.WebService;
 @WebService
 public interface PushService {
 
-	public int push();
+	public String push(final Message message);
 }

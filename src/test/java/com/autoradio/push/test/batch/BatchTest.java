@@ -4,7 +4,7 @@ import javax.annotation.Resource;
 
 import org.junit.Test;
 import org.springframework.batch.core.Job;
-import org.springframework.batch.core.JobParameters;
+import org.springframework.batch.core.JobParametersBuilder;
 import org.springframework.batch.core.JobParametersInvalidException;
 import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.batch.core.repository.JobExecutionAlreadyRunningException;
@@ -16,16 +16,16 @@ import com.autoradio.push.test.BaseTest;
 public class BatchTest extends BaseTest {
 
 	@Resource(name = "jobLauncher", type = JobLauncher.class)
-	JobLauncher jobLauncher;
+	private JobLauncher jobLauncher;
 
 	@Resource(name = "caoLaPushJob", type = Job.class)
-	Job caoLaPushJob;
+	private Job caoLaPushJob;
 
 	@Test
 	public void push() {
 
 		try {
-			jobLauncher.run(caoLaPushJob, new JobParameters());
+			jobLauncher.run(caoLaPushJob, new JobParametersBuilder().addString("no", "1111111").toJobParameters());
 		} catch (JobExecutionAlreadyRunningException e) {
 			e.printStackTrace();
 		} catch (JobRestartException e) {
