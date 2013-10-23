@@ -57,12 +57,12 @@
 	
 	<batch:job id="caoLaPushJob">
 		<batch:step id="saveMessage" next="copyData">
-			<batch:tasklet transaction-manager="batchTransactionManager">
+			<batch:tasklet>
 				<bean class="com.autoradio.push.batch.SaveMessageTasklet"/>
 			</batch:tasklet>
 		</batch:step>
 		<batch:step id="copyData">
-			<batch:tasklet transaction-manager="batchTransactionManager">
+			<batch:tasklet>
 				<bean class="com.autoradio.push.batch.CopyDataTasklet"/>
 			</batch:tasklet>
 		</batch:step>
