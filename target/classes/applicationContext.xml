@@ -73,13 +73,13 @@
 	
 	<batch:job id="caoLaPushJob" incrementer="runIdIncrementer">
 		<batch:step id="createPushRecord" next="importMongoData2MySql">
-			<batch:tasklet ref="createPushRecordTasklet" />
+			<batch:tasklet transaction-manager="batchTransactionManager" ref="createPushRecordTasklet" />
 		</batch:step>
 		<batch:step id="importMongoData2MySql" next="pushMessage">
-			<batch:tasklet ref="importMongoData2MySqlTasklet" />
+			<batch:tasklet transaction-manager="batchTransactionManager" ref="importMongoData2MySqlTasklet" />
 		</batch:step>
 		<batch:step id="pushMessage" next="dropTable">
-			<batch:tasklet task-executor="pushMessageExecutor" throttle-limit="10">
+			<batch:tasklet transaction-manager="batchTransactionManager" task-executor="pushMessageExecutor" throttle-limit="10">
 				<batch:chunk reader="pushRecordItemReader" processor="pushMessageProcessor" writer="pushResultWriter" commit-interval="10000" skip-limit="10">
 					<batch:skippable-exception-classes>
 						<batch:include class="java.lang.Exception" />
@@ -88,7 +88,7 @@
 			</batch:tasklet>
 		</batch:step>
 		<batch:step id="dropTable">
-			<batch:tasklet ref="dropTableTasklet" />
+			<batch:tasklet transaction-manager="batchTransactionManager" ref="dropTableTasklet" />
 		</batch:step>
 	</batch:job>
 

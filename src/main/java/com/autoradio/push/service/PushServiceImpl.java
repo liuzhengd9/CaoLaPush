@@ -94,7 +94,9 @@ public class PushServiceImpl implements PushService {
 						});
 
 		try {
-			jobLauncher.run(caoLaPushJob, new JobParametersBuilder().addString("msgNo", message.getMsgNo()).toJobParameters());
+			jobLauncher.run(caoLaPushJob,
+					new JobParametersBuilder().addString("msgNo", message.getMsgNo()).addString("sendStartTime", message.getSendStartTime()).addString("sendEndTime", message.getSendEndTime())
+							.addString("sendOvertimeRule", String.valueOf(message.getSendOvertimeRule())).toJobParameters());
 			return JSON.toString(createResult(1, "成功"));
 		} catch (JobExecutionAlreadyRunningException | JobRestartException | JobInstanceAlreadyCompleteException | JobParametersInvalidException e) {
 			logger.error(e.getMessage(), e);
