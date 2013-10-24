@@ -43,38 +43,33 @@
 
 	<context:component-scan base-package="com.autoradio.push" />
 
-	<jaxws:client id="pushClient" serviceClass="com.autoradio.push.service.PushService" address="http://localhost:8080/ws/PushService" />
-
-	<jaxws:endpoint id="pushService" implementor="com.autoradio.push.service.PushServiceImpl" address="http://localhost:8080/ws/PushService" />
+	<jaxws:endpoint id="pushWebService" implementor="com.autoradio.push.ws.PushWebServiceImpl" address="http://localhost:8080/ws/PushService" />
 
 	<bean id="jobLauncher" class="org.springframework.batch.core.launch.support.SimpleJobLauncher">
 		<property name="jobRepository" ref="jobRepository" />
 	</bean>
 	
-	<bean id="jobRepository" class="org.springframework.batch.core.repository.support.MapJobRepositoryFactoryBean" />
-	
 	<bean id="batchTransactionManager" class="org.springframework.batch.support.transaction.ResourcelessTransactionManager" />
+
+	<bean id="jobRepository" class="org.springframework.batch.core.repository.support.MapJobRepositoryFactoryBean">
+		<property name="transactionManager" ref="batchTransactionManager" />
+	</bean>
 	
 	<bean id="runIdIncrementer" class="org.springframework.batch.core.launch.support.RunIdIncrementer" />
 	
 	<bean id="pushRecordItemReader" class="org.springframework.batch.item.database.JdbcCursorItemReader" scope="step">
 		<property name="dataSource" ref="dataSource" />
-		<property name="sql" value="select id as id,msg_no as msgNo,receive_info_table_name as receiveInfoTableName from push_record where msg_no=#{jobParameters['msgNo']}" />
+		<property name="sql" value="select id as id,msg_no as msgNo,receive_info_table_name as receiveInfoTableName from push_record_#{jobParameters['msgNo']} where msg_no=#{jobParameters['msgNo']}" />
 		<property name="rowMapper">
 			<bean class="org.springframework.jdbc.core.BeanPropertyRowMapper">
-				<property name="mappedClass" value="com.autoradio.push.service.PushRecord" />
+				<property name="mappedClass" value="com.autoradio.push.pojo.PushRecord" />
 			</bean>
 		</property>
-		<!-- property name="preparedStatementSetter">
-			<bean class="org.springframework.batch.core.resource.ListPreparedStatementSetter">
-				<property name="parameters">
-					<list>
-						<value>#{jobParameters['msgNo']}</value>
-					</list>
-				</property>
-			</bean>
-		</property-->
 	</bean>
+	
+	<bean id="importMongoData2MySqlExecutor" class="org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor" />
+	
+	<bean id="pushMessageExecutor" class="org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor" />
 	
 	<batch:job id="caoLaPushJob" incrementer="runIdIncrementer">
 		<batch:step id="createPushRecord" next="importMongoData2MySql">
@@ -83,10 +78,17 @@
 		<batch:step id="importMongoData2MySql" next="pushMessage">
 			<batch:tasklet ref="importMongoData2MySqlTasklet" />
 		</batch:step>
-		<batch:step id="pushMessage">
-			<batch:tasklet>
-				<batch:chunk reader="pushRecordItemReader" processor="pushMessageProcessor" writer="pushResultWriter" commit-interval="10" />
+		<batch:step id="pushMessage" next="dropTable">
+			<batch:tasklet task-executor="pushMessageExecutor" throttle-limit="10">
+				<batch:chunk reader="pushRecordItemReader" processor="pushMessageProcessor" writer="pushResultWriter" commit-interval="10000" skip-limit="10">
+					<batch:skippable-exception-classes>
+						<batch:include class="java.lang.Exception" />
+					</batch:skippable-exception-classes>
+				</batch:chunk>
 			</batch:tasklet>
+		</batch:step>
+		<batch:step id="dropTable">
+			<batch:tasklet ref="dropTableTasklet" />
 		</batch:step>
 	</batch:job>
 

@@ -11,8 +11,8 @@ import org.springframework.stereotype.Component;
 
 import com.autoradio.push.service.PushService;
 
-@Component(value = "importMongoData2MySqlTasklet")
-public class ImportMongoData2MySqlTasklet implements Tasklet {
+@Component(value = "dropTableTasklet")
+public class DropTableTasklet implements Tasklet {
 
 	private final Logger logger = Logger.getLogger(getClass());
 
@@ -22,9 +22,8 @@ public class ImportMongoData2MySqlTasklet implements Tasklet {
 	@Override
 	public RepeatStatus execute(StepContribution contribution, ChunkContext chunkContext) throws Exception {
 
-		logger.info("CopyDataTasklet.execute...");
-		pushService.importMongoData2MySql(chunkContext.getStepContext().getJobParameters().get("msgNo"));
+		logger.info("DropTableTasklet.execute run...");
+		pushService.dropTable(chunkContext.getStepContext().getJobParameters().get("msgNo"));
 		return RepeatStatus.FINISHED;
 	}
-
 }

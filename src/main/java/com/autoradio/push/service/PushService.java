@@ -1,11 +1,14 @@
 package com.autoradio.push.service;
 
-import javax.jws.WebService;
+import com.autoradio.push.pojo.Message;
 
-import com.autoradio.push.service.pojo.Message;
-
-@WebService
 public interface PushService {
 
 	public String push(final Message message);
+
+	public void createPushRecord(Object msgNo);
+
+	public void importMongoData2MySql(Object msgNo);
+
+	public void dropTable(Object msgNo);
 }
