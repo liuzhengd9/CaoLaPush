@@ -1,4 +1,4 @@
-package com.autoradio.push.service;
+package com.autoradio.push.service.pojo;
 
 import java.io.Serializable;
 import java.math.BigDecimal;

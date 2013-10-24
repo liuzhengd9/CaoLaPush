@@ -22,6 +22,8 @@ import org.springframework.batch.core.repository.JobRestartException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.PreparedStatementSetter;
 
+import com.autoradio.push.service.pojo.Message;
+
 @WebService(endpointInterface = "com.autoradio.push.service.PushService")
 @SOAPBinding(style = SOAPBinding.Style.RPC)
 public class PushServiceImpl implements PushService {
