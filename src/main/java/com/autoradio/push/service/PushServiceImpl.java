@@ -20,11 +20,14 @@ import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.batch.core.repository.JobExecutionAlreadyRunningException;
 import org.springframework.batch.core.repository.JobInstanceAlreadyCompleteException;
 import org.springframework.batch.core.repository.JobRestartException;
+import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.PreparedStatementSetter;
 import org.springframework.stereotype.Service;
 
 import com.autoradio.push.pojo.Message;
+import com.mongodb.DBCollection;
+import com.mongodb.DBCursor;
 
 @Service(value = "pushService")
 public class PushServiceImpl implements PushService {
@@ -39,6 +42,9 @@ public class PushServiceImpl implements PushService {
 
 	@Resource(name = "jdbcTemplate", type = JdbcTemplate.class)
 	private JdbcTemplate jdbcTemplate;
+
+	@Resource(name = "mongoTemplate", type = MongoTemplate.class)
+	private MongoTemplate mongoTemplate;
 
 	/**
 	 * 0代表失败 1代表成功
@@ -133,7 +139,20 @@ public class PushServiceImpl implements PushService {
 		for (int i = 0; i < 100; i++) {
 			params.add(new Object[] { msgNo });
 		}
-		jdbcTemplate.batchUpdate(MessageFormat.format("insert into push_record_{0}(msg_no) values(?)", msgNo), params);
+		DBCollection coll = mongoTemplate.getCollection("");
+		DBCursor cursor = coll.find();
+		while (cursor.hasNext()) {
+			// 操作cursor
+
+			if (params.size() == 100000) {
+				jdbcTemplate.batchUpdate(MessageFormat.format("insert into push_record_{0}(msg_no) values(?)", msgNo), params);
+				params.clear();
+			}
+		}
+		if (params.size() > 0) {
+			jdbcTemplate.batchUpdate(MessageFormat.format("insert into push_record_{0}(msg_no) values(?)", msgNo), params);
+		}
+
 	}
 
 	@Override
