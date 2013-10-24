@@ -22,7 +22,7 @@ public class ImportMongoData2MySqlTasklet implements Tasklet {
 	@Override
 	public RepeatStatus execute(StepContribution contribution, ChunkContext chunkContext) throws Exception {
 
-		logger.info("CopyDataTasklet.execute...");
+		logger.info("ImportMongoData2MySqlTasklet.execute...");
 		pushService.importMongoData2MySql(chunkContext.getStepContext().getJobParameters().get("msgNo"));
 		return RepeatStatus.FINISHED;
 	}

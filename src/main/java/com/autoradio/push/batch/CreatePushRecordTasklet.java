@@ -22,7 +22,7 @@ public class CreatePushRecordTasklet implements Tasklet {
 	@Override
 	public RepeatStatus execute(StepContribution contribution, ChunkContext chunkContext) throws Exception {
 
-		logger.info("SaveMessageTasklet.execute...");
+		logger.info("CreatePushRecordTasklet.execute...");
 		pushService.createPushRecord(chunkContext.getStepContext().getJobParameters().get("msgNo"));
 		return RepeatStatus.FINISHED;
 	}
