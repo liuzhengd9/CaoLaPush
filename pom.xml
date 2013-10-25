@@ -2,10 +2,10 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.autoradio.push</groupId>
-	<artifactId>CaoLaPush</artifactId>
+	<artifactId>KaoLaPush</artifactId>
 	<packaging>war</packaging>
 	<version>1.0</version>
-	<name>CaoLaPush Maven Webapp</name>
+	<name>KaoLaPush Maven Webapp</name>
 	<url>http://maven.apache.org</url>
 	<dependencies>
 		<dependency>
@@ -245,7 +245,7 @@
 		</dependency>
 	</dependencies>
 	<build>
-		<finalName>CaoLaPush</finalName>
+		<finalName>KaoLaPush</finalName>
 		<plugins>
 			<!-- plugin>
 				<groupId>org.apache.maven.plugins</groupId>

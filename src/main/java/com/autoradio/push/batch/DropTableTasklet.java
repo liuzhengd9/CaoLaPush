@@ -23,7 +23,9 @@ public class DropTableTasklet implements Tasklet {
 	public RepeatStatus execute(StepContribution contribution, ChunkContext chunkContext) throws Exception {
 
 		logger.info("DropTableTasklet.execute run...");
-		pushService.dropTable(chunkContext.getStepContext().getJobParameters().get("msgNo"));
+		String msgNo = (String) chunkContext.getStepContext().getJobParameters().get("msgNo");
+		pushService.dropTable(msgNo);
+		pushService.updateMsgReceiveRate(msgNo);
 		return RepeatStatus.FINISHED;
 	}
 }

@@ -1,5 +1,7 @@
 package com.autoradio.push.batch;
 
+import java.math.BigDecimal;
+
 import javax.annotation.Resource;
 
 import org.apache.log4j.Logger;
@@ -23,7 +25,7 @@ public class ImportMongoData2MySqlTasklet implements Tasklet {
 	public RepeatStatus execute(StepContribution contribution, ChunkContext chunkContext) throws Exception {
 
 		logger.info("ImportMongoData2MySqlTasklet.execute...");
-		pushService.importMongoData2MySql(chunkContext.getStepContext().getJobParameters().get("msgNo"));
+		pushService.importMongoData2MySql((String)chunkContext.getStepContext().getJobParameters().get("msgNo"),new BigDecimal((String)chunkContext.getStepContext().getJobParameters().get("sendRate")));
 		return RepeatStatus.FINISHED;
 	}
 

@@ -46,6 +46,9 @@ public class Message implements Serializable {
 	// 息发送超过发送时间段后采取的策略:0放弃,1等待(默认),2强制发送
 	private int sendOvertimeRule = 1;
 
+	// 推送比例
+	private BigDecimal sendRate = new BigDecimal(1.00);
+
 	public String getMsgNo() {
 
 		return msgNo;
@@ -174,6 +177,16 @@ public class Message implements Serializable {
 	public void setSendOvertimeRule(int sendOvertimeRule) {
 
 		this.sendOvertimeRule = sendOvertimeRule;
+	}
+
+	public BigDecimal getSendRate() {
+
+		return sendRate;
+	}
+
+	public void setSendRate(BigDecimal sendRate) {
+
+		this.sendRate = sendRate;
 	}
 
 }

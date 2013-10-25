@@ -15,7 +15,7 @@
 	</appender>
 	
 	<appender name="debugFile" class="org.apache.log4j.DailyRollingFileAppender">
-		<param name="File" value="CaoLaPush_debug.log" />
+		<param name="File" value="KaoLaPush_debug.log" />
 		<param name="DatePattern" value="'.'yyyy-MM-dd'.log'" />
 		<layout class="org.apache.log4j.PatternLayout">
 			<param name="ConversionPattern" value="%d{yyyy-MM-dd HH:mm:ss,SSS} %l %p - %m%n" />
@@ -28,7 +28,7 @@
 	</appender>
 	
 	<appender name="infoFile" class="org.apache.log4j.DailyRollingFileAppender">
-		<param name="File" value="CaoLaPush_info.log" />
+		<param name="File" value="KaoLaPush_info.log" />
 		<param name="DatePattern" value="'.'yyyy-MM-dd'.log'" />
 		<layout class="org.apache.log4j.PatternLayout">
 			<param name="ConversionPattern" value="%d{yyyy-MM-dd HH:mm:ss,SSS} %l %p - %m%n" />
@@ -41,7 +41,7 @@
 	</appender>
 	
 	<appender name="errorFile" class="org.apache.log4j.DailyRollingFileAppender">
-		<param name="File" value="CaoLaPush_error.log" />
+		<param name="File" value="KaoLaPush_error.log" />
 		<param name="DatePattern" value="'.'yyyy-MM-dd'.log'" />
 		<layout class="org.apache.log4j.PatternLayout">
 			<param name="ConversionPattern" value="%d{yyyy-MM-dd HH:mm:ss,SSS} %l %p - %m%n" />
@@ -54,7 +54,7 @@
 	</appender>
 	
 	<appender name="warnFile" class="org.apache.log4j.DailyRollingFileAppender">
-		<param name="File" value="CaoLaPush_warn.log" />
+		<param name="File" value="KaoLaPush_warn.log" />
 		<param name="DatePattern" value="'.'yyyy-MM-dd'.log'" />
 		<layout class="org.apache.log4j.PatternLayout">
 			<param name="ConversionPattern" value="%d{yyyy-MM-dd HH:mm:ss,SSS} %l %p - %m%n" />

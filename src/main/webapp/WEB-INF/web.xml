@@ -4,7 +4,7 @@
 	xsi:schemaLocation="http://java.sun.com/xml/ns/javaee http://java.sun.com/xml/ns/javaee/web-app_3_0.xsd">
 	<context-param>
 		<param-name>webAppRootKey</param-name>
-		<param-value>CaoLaPush.root</param-value>
+		<param-value>KaoLaPush.root</param-value>
 	</context-param>
 	<!-- 加载spring容器文件 -->
 	<context-param>

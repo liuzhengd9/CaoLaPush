@@ -10,7 +10,7 @@ public class PushRecord implements Serializable {
 
 	private String msgNo;
 
-	private String receiveInfoTableName;
+	private String udid;
 
 	public int getId() {
 
@@ -32,13 +32,14 @@ public class PushRecord implements Serializable {
 		this.msgNo = msgNo;
 	}
 
-	public String getReceiveInfoTableName() {
+	public String getUdid() {
 
-		return receiveInfoTableName;
+		return udid;
 	}
 
-	public void setReceiveInfoTableName(String receiveInfoTableName) {
+	public void setUdid(String udid) {
 
-		this.receiveInfoTableName = receiveInfoTableName;
+		this.udid = udid;
 	}
+
 }

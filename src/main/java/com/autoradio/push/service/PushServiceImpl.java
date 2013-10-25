@@ -1,5 +1,6 @@
 package com.autoradio.push.service;
 
+import java.math.BigDecimal;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.text.MessageFormat;
@@ -26,8 +27,10 @@ import org.springframework.jdbc.core.PreparedStatementSetter;
 import org.springframework.stereotype.Service;
 
 import com.autoradio.push.pojo.Message;
+import com.mongodb.BasicDBObject;
 import com.mongodb.DBCollection;
 import com.mongodb.DBCursor;
+import com.mongodb.DBObject;
 
 @Service(value = "pushService")
 public class PushServiceImpl implements PushService {
@@ -37,8 +40,8 @@ public class PushServiceImpl implements PushService {
 	@Resource(name = "jobLauncher", type = JobLauncher.class)
 	private JobLauncher jobLauncher;
 
-	@Resource(name = "caoLaPushJob", type = Job.class)
-	private Job caoLaPushJob;
+	@Resource(name = "kaoLaPushJob", type = Job.class)
+	private Job kaoLaPushJob;
 
 	@Resource(name = "jdbcTemplate", type = JdbcTemplate.class)
 	private JdbcTemplate jdbcTemplate;
@@ -50,7 +53,7 @@ public class PushServiceImpl implements PushService {
 	 * 0代表失败 1代表成功
 	 */
 	@Override
-	public String push(final Message message) {
+	public String push(Message message) {
 
 		// 检查参数
 		if (message == null) {
@@ -74,9 +77,21 @@ public class PushServiceImpl implements PushService {
 		if (message.getSendOvertimeRule() != 0 && message.getSendOvertimeRule() != 1 && message.getSendOvertimeRule() != 2) {
 			return JSON.toString(createResult(0, "消息发送超过发送时间段后采取的策略只能为0、1、2中的一个,0代表放弃,1代表等待,2代表强制发送"));
 		}
+		if (message.getSendRate().doubleValue() <= 0D || message.getSendRate().doubleValue() > 1D) {
+			return JSON.toString(createResult(0, "消息发送比例必须大于0且小于等于1"));
+		}
+		// 保存消息
+		saveMessage(message);
+		// 启动发送线程
+		startPushJob(message);
+		return JSON.toString(createResult(1, "任务发送成功"));
+	}
+
+	private void saveMessage(final Message message) {
+
 		// 向数据库中添加待发送记录
 		jdbcTemplate
-				.update("insert into push_message(msg_no,msg_platform,msg_title,msg_content,send_state,send_start_time,send_end_time,send_overtime_rule) values(?,?,?,?,0,?,?,?) on duplicate key update msg_platform=?,msg_title=?,msg_content=?,send_state=0,send_start_time=?,send_end_time=?,send_overtime_rule=?",
+				.update("insert into push_message(msg_no,msg_platform,msg_title,msg_content,send_state,send_start_time,send_end_time,send_overtime_rule,send_rate) values(?,?,?,?,0,?,?,?,?) on duplicate key update msg_platform=?,msg_title=?,msg_content=?,msg_send_times=0,msg_receive_times=0,msg_receive_rate=0,msg_read_times=0,msg_read_rate=0,send_state=0,send_start_time=?,send_end_time=?,send_overtime_rule=?,send_rate=?",
 						new PreparedStatementSetter() {
 
 							@Override
@@ -89,25 +104,37 @@ public class PushServiceImpl implements PushService {
 								ps.setString(5, message.getSendStartTime());
 								ps.setString(6, message.getSendEndTime());
 								ps.setInt(7, message.getSendOvertimeRule());
+								ps.setBigDecimal(8, message.getSendRate());
 								// 出现重复key的时候
-								ps.setInt(8, message.getMsgPlatform());
-								ps.setString(9, message.getMsgTitle());
-								ps.setString(10, message.getMsgContent());
-								ps.setString(11, message.getSendStartTime());
-								ps.setString(12, message.getSendEndTime());
-								ps.setInt(13, message.getSendOvertimeRule());
+								ps.setInt(9, message.getMsgPlatform());
+								ps.setString(10, message.getMsgTitle());
+								ps.setString(11, message.getMsgContent());
+								ps.setString(12, message.getSendStartTime());
+								ps.setString(13, message.getSendEndTime());
+								ps.setInt(14, message.getSendOvertimeRule());
+								ps.setBigDecimal(15, message.getSendRate());
 							}
 						});
+	}
 
-		try {
-			jobLauncher.run(caoLaPushJob,
-					new JobParametersBuilder().addString("msgNo", message.getMsgNo()).addString("sendStartTime", message.getSendStartTime()).addString("sendEndTime", message.getSendEndTime())
-							.addString("sendOvertimeRule", String.valueOf(message.getSendOvertimeRule())).toJobParameters());
-			return JSON.toString(createResult(1, "成功"));
-		} catch (JobExecutionAlreadyRunningException | JobRestartException | JobInstanceAlreadyCompleteException | JobParametersInvalidException e) {
-			logger.error(e.getMessage(), e);
-			return JSON.toString(createResult(2, e.getMessage()));
-		}
+	public void startPushJob(final Message message) {
+
+		new Thread() {
+
+			public void run() {
+
+				try {
+					jobLauncher.run(
+							kaoLaPushJob,
+							new JobParametersBuilder().addString("msgNo", message.getMsgNo()).addString("sendStartTime", message.getSendStartTime()).addString("sendEndTime", message.getSendEndTime())
+									.addString("sendOvertimeRule", String.valueOf(message.getSendOvertimeRule())).addString("sendRate", message.getSendRate().toString())
+									.addString("msgPlatform", String.valueOf(message.getMsgPlatform())).toJobParameters());
+
+				} catch (JobExecutionAlreadyRunningException | JobRestartException | JobInstanceAlreadyCompleteException | JobParametersInvalidException e) {
+					logger.error(e.getMessage(), e);
+				}
+			}
+		}.start();
 	}
 
 	/**
@@ -128,31 +155,34 @@ public class PushServiceImpl implements PushService {
 	public void createPushRecord(Object msgNo) {
 
 		String[] sqls = new String[] { MessageFormat.format("drop table if exists push_record_{0}", msgNo),
-				MessageFormat.format("create table push_record_{0}(id int not null auto_increment,msg_no varchar(10) not null,receive_info_table_name varchar(20),primary key (id));", msgNo) };
+				MessageFormat.format("create table push_record_{0}(id int not null auto_increment,msg_no varchar(10) not null,udid varchar(100),primary key (id))", msgNo),
+				"update push_message set send_state=1 where msg_no='" + msgNo + "'" };
 		jdbcTemplate.batchUpdate(sqls);
 	}
 
 	@Override
-	public void importMongoData2MySql(Object msgNo) {
+	public void importMongoData2MySql(String msgNo, BigDecimal sendRate) {
 
 		List<Object[]> params = new ArrayList<Object[]>();
-		for (int i = 0; i < 100; i++) {
-			params.add(new Object[] { msgNo });
-		}
-		DBCollection coll = mongoTemplate.getCollection("");
-		DBCursor cursor = coll.find();
-		while (cursor.hasNext()) {
-			// 操作cursor
 
-			if (params.size() == 100000) {
-				jdbcTemplate.batchUpdate(MessageFormat.format("insert into push_record_{0}(msg_no) values(?)", msgNo), params);
-				params.clear();
+		DBCollection coll = mongoTemplate.getCollection("basis_channelSource");
+		DBObject obj = new BasicDBObject();
+		obj.put("udid", new BasicDBObject("$exists", true));
+		long count = new BigDecimal(coll.count(obj)).multiply(sendRate).longValue();
+		try (DBCursor cursor = coll.find(obj)) {
+
+			while (cursor.hasNext() && count-- > 0) {
+				// 操作cursor
+				params.add(new Object[] { msgNo, cursor.next().get("udid") });
+				if (params.size() == 100000) {
+					jdbcTemplate.batchUpdate(MessageFormat.format("insert into push_record_{0}(msg_no,udid) values(?,?)", msgNo), params);
+					params.clear();
+				}
+			}
+			if (params.size() > 0) {
+				jdbcTemplate.batchUpdate(MessageFormat.format("insert into push_record_{0}(msg_no,udid) values(?,?)", msgNo), params);
 			}
 		}
-		if (params.size() > 0) {
-			jdbcTemplate.batchUpdate(MessageFormat.format("insert into push_record_{0}(msg_no) values(?)", msgNo), params);
-		}
-
 	}
 
 	@Override
@@ -160,5 +190,36 @@ public class PushServiceImpl implements PushService {
 
 		logger.info("drop table push_record_" + msgNo);
 		jdbcTemplate.update(MessageFormat.format("drop table push_record_{0}", msgNo));
+	}
+
+	@Override
+	public void updateMsgSendTimes(String msgNo, int times) {
+
+		jdbcTemplate.update("update push_message set msg_send_times=msg_send_times+? where msg_no=?", times, msgNo);
+
+	}
+
+	@Override
+	public void updateMsgReceiveTimes(String msgNo, int times) {
+
+		jdbcTemplate.update("update push_message set msg_receive_times=msg_receive_times+? where msg_no=?", times, msgNo);
+	}
+
+	@Override
+	public void updateMsgReadTimes(String msgNo, int times) {
+
+		jdbcTemplate.update("update push_message set msg_read_times=msg_read_times+? where msg_no=?", times, msgNo);
+	}
+
+	@Override
+	public void updateMsgReceiveRate(String msgNo) {
+
+		jdbcTemplate.update("update push_message set msg_receive_rate=msg_receive_times/msg_send_times where msg_no=?", msgNo);
+	}
+
+	@Override
+	public void updateMsgReadRate(String msgNo) {
+
+		jdbcTemplate.update("update push_message set msg_receive_rate=msg_read_times/msg_send_times where msg_no=?", msgNo);
 	}
 }

@@ -21,6 +21,7 @@ public class PushMessageProcessor implements ItemProcessor<PushRecord, PushRecor
 	public PushRecord process(PushRecord item) throws Exception {
 
 		logger.info("PushMessageProcessor.process run...");
+		logger.info("msgNo:" + item.getMsgNo() + ",udid:" + item.getUdid());
 		return item;
 	}
 

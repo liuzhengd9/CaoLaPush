@@ -42,9 +42,9 @@
 		<property name="dataSource" ref="dataSource" />
 	</bean>
 	
-	<mongo:mongo id="mongo" host="localhost" port="27017" />
+	<mongo:mongo id="mongo" host="${kaola.mongodb.url}" port="${kaola.mongodb.port}" />
 	
-	<mongo:db-factory id="mongoDbFactory" dbname="dm" mongo-ref="mongo" />
+	<mongo:db-factory id="mongoDbFactory" dbname="${kaola.mongodb.db}" mongo-ref="mongo" />
 	
 	<bean id="mongoTemplate" class="org.springframework.data.mongodb.core.MongoTemplate">
 		<constructor-arg name="mongoDbFactory" ref="mongoDbFactory" />
@@ -66,9 +66,27 @@
 	
 	<bean id="runIdIncrementer" class="org.springframework.batch.core.launch.support.RunIdIncrementer" />
 	
-	<bean id="pushRecordItemReader" class="org.springframework.batch.item.database.JdbcCursorItemReader" scope="step">
+	<bean id="pushRecordItemReader" class="org.springframework.batch.item.database.JdbcPagingItemReader" scope="step">
 		<property name="dataSource" ref="dataSource" />
-		<property name="sql" value="select id as id,msg_no as msgNo,receive_info_table_name as receiveInfoTableName from push_record_#{jobParameters['msgNo']} where msg_no=#{jobParameters['msgNo']}" />
+		<property name="saveState" value="false" />
+		<property name="pageSize" value="10000" />
+		<property name="queryProvider">
+			<bean class="org.springframework.batch.item.database.support.MySqlPagingQueryProvider">
+				<property name="selectClause" value="select id as id,msg_no as msgNo,udid as udid" />
+				<property name="fromClause" value="from push_record_#{jobParameters['msgNo']}" />
+				<property name="whereClause" value="where msg_no=#{jobParameters['msgNo']}" />
+				<property name="sortKeys">
+					<map>
+						<entry>
+							<key>
+								<value>id</value>
+							</key>
+							<value>ASCENDING</value>
+						</entry>
+					</map>
+				</property>
+			</bean>
+		</property>
 		<property name="rowMapper">
 			<bean class="org.springframework.jdbc.core.BeanPropertyRowMapper">
 				<property name="mappedClass" value="com.autoradio.push.pojo.PushRecord" />
@@ -78,9 +96,9 @@
 	
 	<bean id="importMongoData2MySqlExecutor" class="org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor" />
 	
-	<bean id="pushMessageExecutor" class="org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor" />
+	<bean id="pushMessageExecutor" class="org.springframework.core.task.SimpleAsyncTaskExecutor" />
 	
-	<batch:job id="caoLaPushJob" incrementer="runIdIncrementer">
+	<batch:job id="kaoLaPushJob" incrementer="runIdIncrementer">
 		<batch:step id="createPushRecord" next="importMongoData2MySql">
 			<batch:tasklet transaction-manager="batchTransactionManager" ref="createPushRecordTasklet" />
 		</batch:step>
@@ -89,10 +107,13 @@
 		</batch:step>
 		<batch:step id="pushMessage" next="dropTable">
 			<batch:tasklet transaction-manager="batchTransactionManager" task-executor="pushMessageExecutor" throttle-limit="10">
-				<batch:chunk reader="pushRecordItemReader" processor="pushMessageProcessor" writer="pushResultWriter" commit-interval="10000" skip-limit="10">
+				<batch:chunk reader="pushRecordItemReader" writer="pushResultWriter" commit-interval="10000" skip-limit="10" retry-limit="1">
 					<batch:skippable-exception-classes>
 						<batch:include class="java.lang.Exception" />
 					</batch:skippable-exception-classes>
+					<batch:retryable-exception-classes>
+						<batch:include class="java.lang.Exception"/>
+					</batch:retryable-exception-classes>
 				</batch:chunk>
 			</batch:tasklet>
 		</batch:step>
