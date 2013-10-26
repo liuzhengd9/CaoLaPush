@@ -4,15 +4,15 @@ import javax.annotation.Resource;
 import javax.jws.WebService;
 import javax.jws.soap.SOAPBinding;
 
-import com.autoradio.push.service.PushService;
+import com.autoradio.push.service.IPushService;
 import com.autoradio.push.pojo.Message;
 
 @WebService(endpointInterface = "com.autoradio.push.ws.PushWebService")
 @SOAPBinding(style = SOAPBinding.Style.RPC)
 public class PushWebServiceImpl implements PushWebService {
 
-	@Resource(name = "pushService", type = PushService.class)
-	private PushService pushService;
+	@Resource(name = "pushService", type = IPushService.class)
+	private IPushService pushService;
 
 	@Override
 	public String push(Message message) {

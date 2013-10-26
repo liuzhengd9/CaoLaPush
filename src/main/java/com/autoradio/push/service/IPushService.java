@@ -1,10 +1,12 @@
 package com.autoradio.push.service;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 import com.autoradio.push.pojo.Message;
+import com.autoradio.push.pojo.PushRecord;
 
-public interface PushService {
+public interface IPushService {
 
 	public String push(Message message);
 
@@ -12,7 +14,9 @@ public interface PushService {
 
 	public void importMongoData2MySql(String msgNo, BigDecimal sendRate);
 
-	public void dropTable(Object msgNo);
+	public void send(List<? extends PushRecord> items, String msgNo);
+
+	public void dropTable(String msgNo);
 
 	public void updateMsgSendTimes(String msgNo, int times);
 

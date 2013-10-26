@@ -2,13 +2,21 @@ package com.autoradio.push.service;
 
 import java.math.BigDecimal;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Time;
 import java.text.MessageFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
+import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 
 import org.apache.cxf.common.util.StringUtils;
@@ -21,19 +29,22 @@ import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.batch.core.repository.JobExecutionAlreadyRunningException;
 import org.springframework.batch.core.repository.JobInstanceAlreadyCompleteException;
 import org.springframework.batch.core.repository.JobRestartException;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.PreparedStatementSetter;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Service;
 
 import com.autoradio.push.pojo.Message;
+import com.autoradio.push.pojo.PushRecord;
 import com.mongodb.BasicDBObject;
 import com.mongodb.DBCollection;
 import com.mongodb.DBCursor;
 import com.mongodb.DBObject;
 
 @Service(value = "pushService")
-public class PushServiceImpl implements PushService {
+public class PushServiceImpl implements IPushService {
 
 	private final Logger logger = Logger.getLogger(getClass());
 
@@ -48,6 +59,24 @@ public class PushServiceImpl implements PushService {
 
 	@Resource(name = "mongoTemplate", type = MongoTemplate.class)
 	private MongoTemplate mongoTemplate;
+
+	@Resource(name = "jiguangSendService", type = ISendService.class)
+	private ISendService sendService;
+
+	@Value(value = "${execute.pushService.threadPool.size}")
+	private int poolSize = 10;
+
+	@Value(value = "${sendThread.suspend.second}")
+	private int suspendTime = 1;
+
+	private Executor executor;
+
+	@PostConstruct
+	public void initThreadPool() {
+
+		logger.info("execute.pushService.threadPool.size:" + this.poolSize);
+		executor = Executors.newFixedThreadPool(this.poolSize);
+	}
 
 	/**
 	 * 0代表失败 1代表成功
@@ -76,6 +105,9 @@ public class PushServiceImpl implements PushService {
 		}
 		if (message.getSendOvertimeRule() != 0 && message.getSendOvertimeRule() != 1 && message.getSendOvertimeRule() != 2) {
 			return JSON.toString(createResult(0, "消息发送超过发送时间段后采取的策略只能为0、1、2中的一个,0代表放弃,1代表等待,2代表强制发送"));
+		}
+		if (message.getSendOvertimeRule() == 1 && Time.valueOf(message.getSendStartTime()).after(Time.valueOf(message.getSendEndTime()))) {
+			return JSON.toString(createResult(0, "消息发送开始时间必须在截止时间之后"));
 		}
 		if (message.getSendRate().doubleValue() <= 0D || message.getSendRate().doubleValue() > 1D) {
 			return JSON.toString(createResult(0, "消息发送比例必须大于0且小于等于1"));
@@ -119,7 +151,7 @@ public class PushServiceImpl implements PushService {
 
 	public void startPushJob(final Message message) {
 
-		new Thread() {
+		executor.execute(new Thread() {
 
 			public void run() {
 
@@ -127,14 +159,15 @@ public class PushServiceImpl implements PushService {
 					jobLauncher.run(
 							kaoLaPushJob,
 							new JobParametersBuilder().addString("msgNo", message.getMsgNo()).addString("sendStartTime", message.getSendStartTime()).addString("sendEndTime", message.getSendEndTime())
-									.addString("sendOvertimeRule", String.valueOf(message.getSendOvertimeRule())).addString("sendRate", message.getSendRate().toString())
-									.addString("msgPlatform", String.valueOf(message.getMsgPlatform())).toJobParameters());
+									.addString("sendOvertimeRule", String.valueOf(message.getSendOvertimeRule()))
+									.addString("sendRate", message.getSendRate().setScale(2, BigDecimal.ROUND_HALF_UP).toString()).addString("msgPlatform", String.valueOf(message.getMsgPlatform()))
+									.toJobParameters());
 
 				} catch (JobExecutionAlreadyRunningException | JobRestartException | JobInstanceAlreadyCompleteException | JobParametersInvalidException e) {
 					logger.error(e.getMessage(), e);
 				}
 			}
-		}.start();
+		});
 	}
 
 	/**
@@ -186,10 +219,12 @@ public class PushServiceImpl implements PushService {
 	}
 
 	@Override
-	public void dropTable(Object msgNo) {
+	public void dropTable(String msgNo) {
 
 		logger.info("drop table push_record_" + msgNo);
-		jdbcTemplate.update(MessageFormat.format("drop table push_record_{0}", msgNo));
+		String[] sqls = new String[] { MessageFormat.format("drop table push_record_{0}", msgNo),
+				"update push_message set msg_receive_rate=msg_receive_times/msg_send_times where msg_no='" + msgNo + "'", "update push_message set send_state=2 where msg_no='" + msgNo + "'" };
+		jdbcTemplate.batchUpdate(sqls);
 	}
 
 	@Override
@@ -221,5 +256,71 @@ public class PushServiceImpl implements PushService {
 	public void updateMsgReadRate(String msgNo) {
 
 		jdbcTemplate.update("update push_message set msg_receive_rate=msg_read_times/msg_send_times where msg_no=?", msgNo);
+	}
+
+	@Override
+	public void send(List<? extends PushRecord> records, String msgNo) {
+
+		Message message = jdbcTemplate.queryForObject("select msg_no,msg_platform,msg_title,msg_content,send_start_time,send_end_time,send_overtime_rule from push_message where msg_no=?",
+				new Object[] { msgNo }, new RowMapper<Message>() {
+
+					@Override
+					public Message mapRow(ResultSet rs, int rowNum) throws SQLException {
+
+						Message message = new Message();
+						message.setMsgNo(rs.getString("msg_no"));
+						message.setMsgPlatform(rs.getInt("msg_platform"));
+						message.setMsgTitle(rs.getString("msg_title"));
+						message.setMsgContent(rs.getString("msg_content"));
+						message.setSendStartTime(rs.getString("send_start_time"));
+						message.setSendEndTime(rs.getString("send_end_time"));
+						message.setSendOvertimeRule(rs.getInt("send_overtime_rule"));
+						return message;
+					}
+
+				});
+		if (message.getSendOvertimeRule() == 0) {
+			return;
+		} else if (message.getSendOvertimeRule() == 1) {
+			Time now = Time.valueOf(new SimpleDateFormat("HH:mm:ss").format(new Date()));
+			while (now.before(Time.valueOf(message.getSendStartTime())) || now.after(Time.valueOf(message.getSendEndTime()))) {
+				logger.info("发送时间不在允许发送时间段范围");
+				try {
+					TimeUnit.MINUTES.sleep(suspendTime);
+				} catch (InterruptedException e) {
+					logger.error(e.getMessage(), e);
+				}
+				now = Time.valueOf(new SimpleDateFormat("HH:mm:ss").format(new Date()));
+			}
+		} else if ("2".equals(message.getSendOvertimeRule())) {
+			// 强制发送,直接执行下面的代码
+		}
+
+		// 更新表中该条信息的待发送记录
+		this.updateMsgSendTimes(msgNo, records.size());
+		// 成功发送的消息条数
+		int sentSize = 0;
+		// 调用发送端接口,需要区分ios和android接口
+		switch (message.getMsgPlatform()) {
+		case 0:
+			// 只发送android
+			sentSize = sendService.batchSend(message, records, 0);
+			break;
+		case 1:
+			// 只发送ios
+			sentSize = sendService.batchSend(message, records, 1);
+			break;
+		case 2:
+			// ios和android都发送
+			sentSize = sendService.batchSend(message, records, 2);
+			break;
+		default:
+			// 默认都发送
+			sentSize = sendService.batchSend(message, records, 2);
+		}
+		if (sentSize > 0) {
+			// 发送完成
+			this.updateMsgReceiveTimes(msgNo, sentSize);
+		}
 	}
 }

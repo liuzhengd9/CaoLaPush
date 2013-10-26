@@ -11,15 +11,15 @@ import org.springframework.batch.core.step.tasklet.Tasklet;
 import org.springframework.batch.repeat.RepeatStatus;
 import org.springframework.stereotype.Component;
 
-import com.autoradio.push.service.PushService;
+import com.autoradio.push.service.IPushService;
 
 @Component(value = "importMongoData2MySqlTasklet")
 public class ImportMongoData2MySqlTasklet implements Tasklet {
 
 	private final Logger logger = Logger.getLogger(getClass());
 
-	@Resource(name = "pushService", type = PushService.class)
-	private PushService pushService;
+	@Resource(name = "pushService", type = IPushService.class)
+	private IPushService pushService;
 
 	@Override
 	public RepeatStatus execute(StepContribution contribution, ChunkContext chunkContext) throws Exception {
