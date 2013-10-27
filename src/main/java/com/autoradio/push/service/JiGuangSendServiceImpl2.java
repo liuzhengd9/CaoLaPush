@@ -2,6 +2,7 @@ package com.autoradio.push.service;
 
 import java.util.List;
 
+import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 
 import org.apache.log4j.Logger;
@@ -17,19 +18,36 @@ import cn.jpush.api.MessageResult;
 import com.autoradio.push.pojo.Message;
 import com.autoradio.push.pojo.PushRecord;
 
-@Service(value = "jiguangSendService")
-public class JiGuangSendServiceImpl implements ISendService {
+@Service(value = "jiguangSendService2")
+public class JiGuangSendServiceImpl2 implements ISendService {
 
 	private final Logger logger = Logger.getLogger(getClass());
 
 	@Value(value = "${jpush.masterSecret}")
 	private String masterSecret;
 
+	@Value(value = "${jpush.appKey}")
+	private String appKey;
+
 	@Value(value = "${jpush.message.timeToLive}")
 	private int timeToLive;
 
 	@Resource(name = "jdbcTemplate", type = JdbcTemplate.class)
 	private JdbcTemplate jdbcTemplate;
+
+	private JPushClient androidPushClient;
+
+	private JPushClient iosPushClient;
+
+	private JPushClient allPushClient;
+
+	@PostConstruct
+	public void initJPushClient() {
+
+		androidPushClient = new JPushClient(masterSecret, appKey, timeToLive, DeviceEnum.Android);
+		iosPushClient = new JPushClient(masterSecret, appKey, timeToLive, DeviceEnum.IOS);
+		allPushClient = new JPushClient(masterSecret, appKey, timeToLive);
+	}
 
 	@Override
 	public int send(Message message, PushRecord record, int platform) {
@@ -38,13 +56,13 @@ public class JiGuangSendServiceImpl implements ISendService {
 		try {
 			switch (platform) {
 			case 0:
-				msgResult = new JPushClient(masterSecret, record.getUdid(), timeToLive, DeviceEnum.Android).sendCustomMessageWithAppKey(record.getId(), message.getMsgTitle(), message.getMsgContent());
+				msgResult = this.androidPushClient.sendCustomMessageWithAppKey(record.getId(), message.getMsgTitle(), message.getMsgContent());
 				break;
 			case 1:
-				msgResult = new JPushClient(masterSecret, record.getUdid(), timeToLive, DeviceEnum.IOS).sendCustomMessageWithAppKey(record.getId(), message.getMsgTitle(), message.getMsgContent());
+				msgResult = this.iosPushClient.sendCustomMessageWithAppKey(record.getId(), message.getMsgTitle(), message.getMsgContent());
 				break;
 			default:
-				msgResult = new JPushClient(masterSecret, record.getUdid(), timeToLive).sendCustomMessageWithAppKey(record.getId(), message.getMsgTitle(), message.getMsgContent());
+				msgResult = this.allPushClient.sendCustomMessageWithAppKey(record.getId(), message.getMsgTitle(), message.getMsgContent());
 			}
 			if (msgResult != null) {
 				if (msgResult.getErrcode() == ErrorCodeEnum.NOERROR.value()) {
