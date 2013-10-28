@@ -5,6 +5,7 @@ import java.math.BigDecimal;
 import javax.annotation.Resource;
 
 import org.junit.Test;
+import org.springframework.util.Assert;
 
 import com.autoradio.push.pojo.Message;
 import com.autoradio.push.ws.PushWebService;
@@ -15,7 +16,7 @@ public class PushClient extends BaseTest {
 	@Resource(name = "pushClient", type = PushWebService.class)
 	private PushWebService pushClient;
 
-	@Test
+//	@Test
 	public void testPush() {
 
 		Message message = new Message();
@@ -29,7 +30,7 @@ public class PushClient extends BaseTest {
 		System.out.println(pushClient.push(message));
 	}
 
-	// @Test
+	 @Test
 	public void testBatchPush() {
 
 		for (int i = 1; i <= 100; i++) {
@@ -43,5 +44,15 @@ public class PushClient extends BaseTest {
 			message.setSendRate(new BigDecimal(1.00));
 			System.out.println(pushClient.push(message));
 		}
+	}
+
+	// @Test
+	public void testGetResult() {
+
+		Message message = pushClient.getMessage("1000");
+
+		Assert.notNull(message);
+
+		System.out.println(message.getMsgContent());
 	}
 }

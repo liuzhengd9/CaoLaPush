@@ -20,4 +20,10 @@ public class PushWebServiceImpl implements PushWebService {
 		return pushService.push(message);
 	}
 
+	@Override
+	public Message getMessage(String msgNo) {
+
+		return pushService.getMessageByMsgNo(msgNo);
+	}
+
 }

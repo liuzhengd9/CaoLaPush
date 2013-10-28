@@ -28,4 +28,6 @@ public interface IPushService {
 
 	public void updateMsgReadRate(String msgNo);
 
+	public Message getMessageByMsgNo(String msgNo);
+
 }

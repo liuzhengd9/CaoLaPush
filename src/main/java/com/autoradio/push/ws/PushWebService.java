@@ -8,4 +8,6 @@ import com.autoradio.push.pojo.Message;
 public interface PushWebService {
 
 	public String push(final Message message);
+
+	public Message getMessage(String msgNo);
 }

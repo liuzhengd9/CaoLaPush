@@ -335,4 +335,36 @@ public class PushServiceImpl implements IPushService {
 		}
 		logger.info("**************use time 4 in milliseconds:" + (System.currentTimeMillis() - start));
 	}
+
+	@Override
+	public Message getMessageByMsgNo(String msgNo) {
+
+		List<Message> list = jdbcTemplate
+				.query("select msg_no,msg_platform,msg_title,msg_content,msg_send_times,msg_receive_times,msg_receive_rate,msg_read_times,msg_read_rate,send_state,send_start_time,send_end_time,send_overtime_rule,send_rate from push_message where msg_no=?",
+						new Object[] { msgNo }, new RowMapper<Message>() {
+
+							@Override
+							public Message mapRow(ResultSet rs, int rowNum) throws SQLException {
+
+								Message message = new Message();
+								message.setMsgNo(rs.getString("msg_no"));
+								message.setMsgPlatform(rs.getInt("msg_platform"));
+								message.setMsgTitle(rs.getString("msg_title"));
+								message.setMsgContent(rs.getString("msg_content"));
+								message.setMsgSendTimes(rs.getInt("msg_send_times"));
+								message.setMsgReceiveTimes(rs.getInt("msg_receive_times"));
+								message.setMsgReceiveRate(rs.getBigDecimal("msg_receive_rate"));
+								message.setMsgReadTimes(rs.getInt("msg_read_times"));
+								message.setMsgReadRate(rs.getBigDecimal("msg_read_rate"));
+								message.setSendState(rs.getInt("send_state"));
+								message.setSendStartTime(rs.getString("send_start_time"));
+								message.setSendEndTime(rs.getString("send_end_time"));
+								message.setSendOvertimeRule(rs.getInt("send_overtime_rule"));
+								message.setSendRate(rs.getBigDecimal("send_rate"));
+								return message;
+							}
+
+						});
+		return list.size() == 0 ? null : list.get(0);
+	}
 }
