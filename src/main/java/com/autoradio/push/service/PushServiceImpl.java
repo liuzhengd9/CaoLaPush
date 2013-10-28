@@ -60,7 +60,7 @@ public class PushServiceImpl implements IPushService {
 	@Resource(name = "mongoTemplate", type = MongoTemplate.class)
 	private MongoTemplate mongoTemplate;
 
-	@Resource(name = "jiguangSendService2", type = ISendService.class)
+	@Resource(name = "jiguangSendService", type = ISendService.class)
 	private ISendService sendService;
 
 	@Value(value = "${execute.pushService.threadPool.size}")
