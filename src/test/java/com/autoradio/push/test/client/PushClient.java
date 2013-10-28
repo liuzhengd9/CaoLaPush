@@ -15,7 +15,7 @@ public class PushClient extends BaseTest {
 	@Resource(name = "pushClient", type = PushWebService.class)
 	private PushWebService pushClient;
 
-	// @Test
+	@Test
 	public void testPush() {
 
 		Message message = new Message();
@@ -29,7 +29,7 @@ public class PushClient extends BaseTest {
 		System.out.println(pushClient.push(message));
 	}
 
-	@Test
+	// @Test
 	public void testBatchPush() {
 
 		for (int i = 1; i <= 100; i++) {

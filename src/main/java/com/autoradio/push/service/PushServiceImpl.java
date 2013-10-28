@@ -60,11 +60,14 @@ public class PushServiceImpl implements IPushService {
 	@Resource(name = "mongoTemplate", type = MongoTemplate.class)
 	private MongoTemplate mongoTemplate;
 
-	@Resource(name = "jiguangSendService", type = ISendService.class)
+	@Resource(name = "jiguangSendService2", type = ISendService.class)
 	private ISendService sendService;
 
 	@Value(value = "${execute.pushService.threadPool.size}")
 	private int poolSize = 10;
+
+	@Value(value = "${mongo2mysql.batch.records.size}")
+	private int batchIntoMySqlSize = 100000;
 
 	@Value(value = "${sendThread.suspend.second}")
 	private int suspendTime = 1;
@@ -207,13 +210,14 @@ public class PushServiceImpl implements IPushService {
 			while (cursor.hasNext() && count-- > 0) {
 				// 操作cursor
 				params.add(new Object[] { msgNo, cursor.next().get("udid") });
-				if (params.size() == 100000) {
+				if (params.size() == batchIntoMySqlSize) {
 					jdbcTemplate.batchUpdate(MessageFormat.format("insert into push_record_{0}(msg_no,udid) values(?,?)", msgNo), params);
 					params.clear();
 				}
 			}
 			if (params.size() > 0) {
 				jdbcTemplate.batchUpdate(MessageFormat.format("insert into push_record_{0}(msg_no,udid) values(?,?)", msgNo), params);
+				params.clear();
 			}
 		}
 	}
@@ -261,6 +265,8 @@ public class PushServiceImpl implements IPushService {
 	@Override
 	public void send(List<? extends PushRecord> records, String msgNo) {
 
+		logger.info("items size:" + records.size());
+		long start = System.currentTimeMillis();
 		Message message = jdbcTemplate.queryForObject("select msg_no,msg_platform,msg_title,msg_content,send_start_time,send_end_time,send_overtime_rule from push_message where msg_no=?",
 				new Object[] { msgNo }, new RowMapper<Message>() {
 
@@ -295,9 +301,12 @@ public class PushServiceImpl implements IPushService {
 		} else if ("2".equals(message.getSendOvertimeRule())) {
 			// 强制发送,直接执行下面的代码
 		}
-
+		logger.info("**************use time 1 in milliseconds:" + (System.currentTimeMillis() - start));
+		start = System.currentTimeMillis();
 		// 更新表中该条信息的待发送记录
 		this.updateMsgSendTimes(msgNo, records.size());
+		logger.info("**************use time 2 in milliseconds:" + (System.currentTimeMillis() - start));
+		start = System.currentTimeMillis();
 		// 成功发送的消息条数
 		int sentSize = 0;
 		// 调用发送端接口,需要区分ios和android接口
@@ -318,9 +327,12 @@ public class PushServiceImpl implements IPushService {
 			// 默认都发送
 			sentSize = sendService.batchSend(message, records, 2);
 		}
+		logger.info("**************use time 3 in milliseconds:" + (System.currentTimeMillis() - start));
+		start = System.currentTimeMillis();
 		if (sentSize > 0) {
 			// 发送完成
 			this.updateMsgReceiveTimes(msgNo, sentSize);
 		}
+		logger.info("**************use time 4 in milliseconds:" + (System.currentTimeMillis() - start));
 	}
 }

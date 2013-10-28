@@ -22,7 +22,7 @@ public class PushResultWriter implements ItemWriter<PushRecord> {
 	@Override
 	public void write(List<? extends PushRecord> items) throws Exception {
 
-		logger.info("PushResultWriter.write run...");
+		logger.info("PushResultWriter.write run..." + items.get(0).getUdid());
 		pushService.send(items, items.get(0).getMsgNo());
 	}
 }
